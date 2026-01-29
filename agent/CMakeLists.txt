@@ -12,3 +12,8 @@ add_executable(perf_hello
   src/perf_hello.cpp
 )
 target_compile_options(perf_hello PRIVATE -Wall -Wextra -Wpedantic -g)
+
+add_executable(perf_hello
+  src/perf_hello.cpp
+)
+target_compile_options(perf_hello PRIVATE -Wall -Wextra -Wpedantic -g)
