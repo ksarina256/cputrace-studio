@@ -9,3 +9,13 @@ Linux CPU profiling tool with C++ agent, backend API, and visualization dashboar
 
 ## Status
 Week 1: Environment + perf hello-world
+
+## Build (WSL / Linux)
+From repo root:
+
+```bash
+rm -rf build
+mkdir build
+cd build
+cmake -G Ninja ../agent
+ninja
