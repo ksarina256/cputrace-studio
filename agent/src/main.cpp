@@ -1,5 +1,10 @@
 #include <iostream>
 #include <string>
+#include <cstdlib>
+
+#include "json_writer.h"
+#include "proc_status.h"
+#include "perf_counter.h"
 
 static void print_usage() {
   std::cout <<
@@ -32,10 +37,37 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  std::cout << "Target PID: " << pid_str
-            << " | duration: " << duration_str
-            << "s | out: " << out_path << "\n";
+  long long pid = std::stoll(pid_str);
+  long long duration = std::stoll(duration_str);
 
-  // implement sampling + JSON output
+  // 1) Read /proc metadata
+  ProcStatus ps = read_proc_status(static_cast<int>(pid));
+
+  // 2) Measure CPU cycles for the target PID for <duration> seconds
+  auto perf = measure_cpu_cycles_for_pid(static_cast<int>(pid),
+                                         static_cast<int>(duration * 1000));
+
+  if (!perf.ok) {
+    std::cerr << "perf counter failed (errno=" << perf.err
+              << "). You may need elevated privileges or a different PID.\n";
+  }
+
+  // 3) Write JSON output
+  JsonWriter jw(out_path);
+  jw.begin_object();
+
+  jw.key("pid"); jw.num(pid);
+  jw.key("duration_seconds"); jw.num(duration);
+
+  jw.key("process_name"); jw.str(ps.name);
+  jw.key("threads"); jw.num(ps.threads);
+  jw.key("vm_rss_kb"); jw.num(ps.vm_rss_kb);
+  jw.key("vm_size_kb"); jw.num(ps.vm_size_kb);
+
+  jw.key("cpu_cycles"); jw.num(perf.ok ? perf.cycles : -1);
+
+  jw.end_object();
+
+  std::cout << "Wrote " << out_path << "\n";
   return 0;
 }
