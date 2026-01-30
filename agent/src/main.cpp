@@ -36,7 +36,6 @@ int main(int argc, char** argv) {
             << " | duration: " << duration_str
             << "s | out: " << out_path << "\n";
 
-  // Week 2: implement sampling + JSON output
+  // implement sampling + JSON output
   return 0;
 }
-EOF
