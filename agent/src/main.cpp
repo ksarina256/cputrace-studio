@@ -5,6 +5,7 @@
 #include "json_writer.h"
 #include "proc_status.h"
 #include "perf_counter.h"
+#include "symbol_resolver.h"
 
 static void print_usage() {
   std::cout <<
@@ -40,36 +41,45 @@ int main(int argc, char** argv) {
   long long pid = std::stoll(pid_str);
   long long duration = std::stoll(duration_str);
 
+  // gather process metadata
   ProcStatus ps = read_proc_status(static_cast<int>(pid));
-  auto perf = measure_cpu_cycles_for_pid(static_cast<int>(pid),
-                                         static_cast<int>(duration * 1000));
+  
+  auto perf = sample_cpu_for_pid(static_cast<int>(pid),
+                                 static_cast<int>(duration * 1000), 
+                                 1000); // 1000Hz sampling
 
   if (!perf.ok) {
     std::cerr << "perf counter failed (errno=" << perf.err
               << "). Try a PID you own or run with sudo.\n";
   }
 
+  SymbolResolver resolver(static_cast<int>(pid));
+
   JsonWriter jw(out_path);
   jw.begin_object();
 
   jw.key("pid"); jw.num(pid);
   jw.key("duration_seconds"); jw.num(duration);
-
   jw.key("process_name"); jw.str(ps.name);
   jw.key("threads"); jw.num(ps.threads);
   jw.key("vm_rss_kb"); jw.num(ps.vm_rss_kb);
   jw.key("vm_size_kb"); jw.num(ps.vm_size_kb);
 
-  jw.key("cpu_cycles"); jw.num(perf.ok ? perf.cycles : -1);
+  jw.key("total_cycles"); jw.num(perf.ok ? perf.total_cycles : -1);
 
   jw.key("samples");
- jw.out << "[\n";
- for (size_t i = 0; i < perf.samples.size(); ++i) {
-     jw.out << "   {\"ip\": " << perf.samples[i].ip << "}";
+  jw.out << "[\n";
+  for (size_t i = 0; i < perf.samples.size(); ++i) {
+     std::string func_name = resolver.resolve(perf.samples[i].ip);
+     if (func_name == "??") func_name = "unknown";
+     
+     jw.out << "    {\"ip\": " << perf.samples[i].ip 
+            << ", \"func\": \"" << func_name << "\"}";
+     
      if (i < perf.samples.size() - 1) jw.out << ",";
      jw.out << "\n";
- }
- jw.out << " ]";
+  }
+  jw.out << "  ]";
 
   jw.end_object();
 
