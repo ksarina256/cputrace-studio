@@ -40,19 +40,15 @@ int main(int argc, char** argv) {
   long long pid = std::stoll(pid_str);
   long long duration = std::stoll(duration_str);
 
-  // 1) Read /proc metadata
   ProcStatus ps = read_proc_status(static_cast<int>(pid));
-
-  // 2) Measure CPU cycles for the target PID for <duration> seconds
   auto perf = measure_cpu_cycles_for_pid(static_cast<int>(pid),
                                          static_cast<int>(duration * 1000));
 
   if (!perf.ok) {
     std::cerr << "perf counter failed (errno=" << perf.err
-              << "). You may need elevated privileges or a different PID.\n";
+              << "). Try a PID you own or run with sudo.\n";
   }
 
-  // 3) Write JSON output
   JsonWriter jw(out_path);
   jw.begin_object();
 
