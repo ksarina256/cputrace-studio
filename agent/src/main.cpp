@@ -62,6 +62,15 @@ int main(int argc, char** argv) {
 
   jw.key("cpu_cycles"); jw.num(perf.ok ? perf.cycles : -1);
 
+  jw.key("samples");
+ jw.out << "[\n";
+ for (size_t i = 0; i < perf.samples.size(); ++i) {
+     jw.out << "   {\"ip\": " << perf.samples[i].ip << "}";
+     if (i < perf.samples.size() - 1) jw.out << ",";
+     jw.out << "\n";
+ }
+ jw.out << " ]";
+
   jw.end_object();
 
   std::cout << "Wrote " << out_path << "\n";
