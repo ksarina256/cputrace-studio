@@ -2,7 +2,7 @@
 
 > Lightweight CPU profiler for Linux — captures per-process CPU usage with <1% overhead and visualizes it in a web dashboard.
 
-Built as a portfolio project targeting AMD internship applications, demonstrating systems programming in C++, REST API design, and React visualization.
+A systems programming project demonstrating CPU performance analysis with C++, REST API design, and React visualization.
 
 ![Dashboard](docs/dashboard.png)
 
@@ -120,7 +120,7 @@ cputrace-studio/
 
 ## Roadmap
 
-- [ ] AMD Zen-specific PMU counters via `perf_event_open`
+- [ ] Hardware PMU counters via `perf_event_open` for deeper CPU insights
 - [ ] Anomaly detection (Z-score based CPU spike alerts)
 - [ ] Multi-process monitoring
 - [ ] CI/CD regression detection (fail build if CPU > threshold)
