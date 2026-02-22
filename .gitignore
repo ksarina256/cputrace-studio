@@ -10,4 +10,8 @@ cmake-build-*/
 .DS_Store
 
 *.log
-*.json
+trace_output/*.json
+/tmp/*.json
+backend/cputrace.db
+backend/__pycache__/
+frontend/node_modules/
