@@ -41,6 +41,18 @@ export default function App() {
     setSamples(raw.samples ?? []);
   };
 
+
+  const computeStats = (data: CpuSample[]) => {
+    if (data.length === 0) return null;
+    const sorted = [...data].map(s => s.cpu_pct).sort((a, b) => a - b);
+    const p50 = sorted[Math.floor(sorted.length * 0.50)];
+    const p95 = sorted[Math.floor(sorted.length * 0.95)];
+    const p99 = sorted[Math.floor(sorted.length * 0.99)];
+    const mean = sorted.reduce((a, b) => a + b, 0) / sorted.length;
+    const stddev = Math.sqrt(sorted.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / sorted.length);
+    const spikes = data.filter(s => s.cpu_pct > mean + 2 * stddev);
+    return { p50, p95, p99, mean, stddev, spikes };
+  };
   const cpuColor = (pct: number) =>
     pct > 80 ? "#ef4444" : pct > 50 ? "#f59e0b" : "#22c55e";
 
@@ -139,6 +151,46 @@ export default function App() {
                   <Line type="monotone" dataKey="rss_kb" stroke="#a78bfa" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
+
+              {(() => {
+                const stats = computeStats(samples);
+                if (!stats) return null;
+                return (
+                  <>
+                    <h3>Statistics</h3>
+                    <div className="stats-grid">
+                      <div className="stat-box">
+                        <div className="stat-label">P50</div>
+                        <div className="stat-value" style={{color: cpuColor(stats.p50)}}>{stats.p50.toFixed(1)}%</div>
+                      </div>
+                      <div className="stat-box">
+                        <div className="stat-label">P95</div>
+                        <div className="stat-value" style={{color: cpuColor(stats.p95)}}>{stats.p95.toFixed(1)}%</div>
+                      </div>
+                      <div className="stat-box">
+                        <div className="stat-label">P99</div>
+                        <div className="stat-value" style={{color: cpuColor(stats.p99)}}>{stats.p99.toFixed(1)}%</div>
+                      </div>
+                      <div className="stat-box">
+                        <div className="stat-label">Std Dev</div>
+                        <div className="stat-value">{stats.stddev.toFixed(2)}%</div>
+                      </div>
+                      <div className="stat-box">
+                        <div className="stat-label">Spikes</div>
+                        <div className="stat-value" style={{color: stats.spikes.length > 0 ? "#ef4444" : "#22c55e"}}>
+                          {stats.spikes.length}
+                        </div>
+                      </div>
+                    </div>
+                    {stats.spikes.length > 0 && (
+                      <div className="spike-warning">
+                        ⚠ {stats.spikes.length} CPU spike{stats.spikes.length > 1 ? "s" : ""} detected
+                        ({">"}{ (stats.mean + 2 * stats.stddev).toFixed(1)}% threshold)
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </>
           )}
         </main>
