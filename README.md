@@ -118,15 +118,6 @@ cputrace-studio/
         └── api.ts          # Backend API client
 ```
 
-## AMD Relevance
-
-This project directly demonstrates skills relevant to AMD engineering roles:
-
-- **CPU microarchitecture awareness** — understanding of CPU cycle accounting, user/kernel time split, and multi-core scheduling
-- **OS internals** — direct use of Linux `/proc` filesystem and `perf_event_open` syscall
-- **Performance engineering** — <1% overhead design, ring buffer architecture, lock-free sampling
-- **Systems programming** — production C++17 with careful memory management
-
 ## Roadmap
 
 - [ ] AMD Zen-specific PMU counters via `perf_event_open`
