@@ -185,7 +185,7 @@ export default function App() {
                     {stats.spikes.length > 0 && (
                       <div className="spike-warning">
                         ⚠ {stats.spikes.length} CPU spike{stats.spikes.length > 1 ? "s" : ""} detected
-                        (>{(stats.mean + 2 * stats.stddev).toFixed(1)}% threshold)
+                        ({">"}{ (stats.mean + 2 * stats.stddev).toFixed(1)}% threshold)
                       </div>
                     )}
                   </>
