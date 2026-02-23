@@ -25,6 +25,10 @@ A systems programming project demonstrating CPU performance analysis with C++, R
 - **Web dashboard** — upload traces, view CPU timeline and memory charts
 - **REST API** — store and query traces via FastAPI + SQLite
 
+## Live Demo
+
+**[cputrace-studio.vercel.app](https://cputrace-studio.vercel.app)**
+
 ## Quick Start
 
 ### 1. Build the C++ Agent
