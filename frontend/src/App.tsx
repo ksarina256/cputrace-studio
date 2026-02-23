@@ -10,6 +10,7 @@ export default function App() {
   const [samples, setSamples]       = useState<CpuSample[]>([]);
   const [uploading, setUploading]   = useState(false);
   const [error, setError]           = useState("");
+  const [loading, setLoading]         = useState(false);
 
   const fetchTraces = useCallback(async () => {
     const res = await listTraces();
@@ -36,9 +37,15 @@ export default function App() {
 
   const handleSelect = async (trace: TraceSummary) => {
     setSelected(trace);
-    const res = await getTrace(trace.id);
-    const raw = JSON.parse(res.data.raw_json);
-    setSamples(raw.samples ?? []);
+    setLoading(true);
+    setSamples([]);
+    try {
+      const res = await getTrace(trace.id);
+      const raw = JSON.parse(res.data.raw_json);
+      setSamples(raw.samples ?? []);
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -53,6 +60,17 @@ export default function App() {
     const spikes = data.filter(s => s.cpu_pct > mean + 2 * stddev);
     return { p50, p95, p99, mean, stddev, spikes };
   };
+  const exportCSV = (trace: TraceSummary, data: CpuSample[]) => {
+    const rows = ["t,cpu_pct,rss_kb,threads", ...data.map(s => `${s.t},${s.cpu_pct},${s.rss_kb},${s.threads}`)];
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${trace.process_name}-${trace.session_id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const cpuColor = (pct: number) =>
     pct > 80 ? "#ef4444" : pct > 50 ? "#f59e0b" : "#22c55e";
 
@@ -104,6 +122,9 @@ export default function App() {
             <>
               <div className="panel-header">
                 <h2>{selected.process_name} <span className="muted">PID {selected.pid}</span></h2>
+                <button className="export-btn" onClick={() => exportCSV(selected, samples)}>
+                  Export CSV
+                </button>
                 <div className="stats">
                   <span>avg <b>{selected.cpu_avg.toFixed(1)}%</b></span>
                   <span>max <b>{selected.cpu_max.toFixed(1)}%</b></span>
