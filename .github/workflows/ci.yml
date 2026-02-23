@@ -19,7 +19,7 @@ jobs:
         run: sudo apt-get install -y cmake build-essential
 
       - name: Clean
-        run: rm -rf build
+        run: find . -name CMakeCache.txt -delete && find . -name cmake_install.cmake -delete && rm -rf build agent/CMakeFiles
       - name: Configure
         run: cmake -S agent -B build -DCMAKE_BUILD_TYPE=Release
 
