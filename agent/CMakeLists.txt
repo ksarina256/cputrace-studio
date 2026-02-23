@@ -18,9 +18,11 @@ add_executable(cputrace
   src/symbol_resolver.cpp
 )
 
-add_executable(perf_hello
-  src/perf_hello.cpp
-)
+if(NOT TARGET perf_hello)
+  add_executable(perf_hello
+    src/perf_hello.cpp
+  )
+endif()
 
 add_executable(test_app
   src/test_app.cpp
