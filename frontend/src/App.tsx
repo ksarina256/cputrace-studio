@@ -5,11 +5,12 @@ import type { TraceSummary, CpuSample } from "./api";
 import "./App.css";
 
 export default function App() {
-  const [traces, setTraces]         = useState<TraceSummary[]>([]);
-  const [selected, setSelected]     = useState<TraceSummary | null>(null);
-  const [samples, setSamples]       = useState<CpuSample[]>([]);
-  const [uploading, setUploading]   = useState(false);
-  const [error, setError]           = useState("");
+  const [traces, setTraces]       = useState<TraceSummary[]>([]);
+  const [selected, setSelected]   = useState<TraceSummary | null>(null);
+  const [samples, setSamples]     = useState<CpuSample[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState("");
 
   const fetchTraces = useCallback(async () => {
     const res = await listTraces();
@@ -36,11 +37,30 @@ export default function App() {
 
   const handleSelect = async (trace: TraceSummary) => {
     setSelected(trace);
-    const res = await getTrace(trace.id);
-    const raw = JSON.parse(res.data.raw_json);
-    setSamples(raw.samples ?? []);
+    setLoading(true);
+    setSamples([]);
+    try {
+      const res = await getTrace(trace.id);
+      const raw = JSON.parse(res.data.raw_json);
+      setSamples(raw.samples ?? []);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const exportCSV = (trace: TraceSummary, data: CpuSample[]) => {
+    const rows = ["t,cpu_pct,rss_kb,threads", ...data.map(s => `${s.t},${s.cpu_pct},${s.rss_kb},${s.threads}`)];
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${trace.process_name}-${trace.session_id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const cpuColor = (pct: number) =>
+    pct > 80 ? "#ef4444" : pct > 50 ? "#f59e0b" : "#22c55e";
 
   const computeStats = (data: CpuSample[]) => {
     if (data.length === 0) return null;
@@ -53,23 +73,27 @@ export default function App() {
     const spikes = data.filter(s => s.cpu_pct > mean + 2 * stddev);
     return { p50, p95, p99, mean, stddev, spikes };
   };
-  const cpuColor = (pct: number) =>
-    pct > 80 ? "#ef4444" : pct > 50 ? "#f59e0b" : "#22c55e";
 
   return (
     <div className="app">
       <header>
-        <h1>⚡ CPUTrace Studio</h1>
-        <label className={`upload-btn ${uploading ? "disabled" : ""}`}>
-          {uploading ? "Uploading..." : "Upload trace.json"}
-          <input type="file" accept=".json" onChange={handleUpload} hidden />
-        </label>
+        <h1>CPUTrace Studio</h1>
+        <div className="header-actions">
+          {selected && (
+            <button className="export-btn-header" onClick={() => exportCSV(selected, samples)}>
+              Export CSV
+            </button>
+          )}
+          <label className={`upload-btn ${uploading ? "disabled" : ""}`}>
+            {uploading ? "Uploading..." : "Upload trace.json"}
+            <input type="file" accept=".json" onChange={handleUpload} hidden />
+          </label>
+        </div>
       </header>
 
       {error && <div className="error">{error}</div>}
 
       <div className="layout">
-        {/* Trace list */}
         <aside>
           <h2>Traces</h2>
           {traces.length === 0 && <p className="muted">No traces yet</p>}
@@ -82,25 +106,24 @@ export default function App() {
               <div className="trace-name">{t.process_name}</div>
               <div className="trace-meta">PID {t.pid} · {t.duration_sec}s</div>
               <div className="trace-cpu">
-                avg <span style={{ color: cpuColor(t.cpu_avg) }}>
-                  {t.cpu_avg.toFixed(1)}%
-                </span>
-                {" "}max <span style={{ color: cpuColor(t.cpu_max) }}>
-                  {t.cpu_max.toFixed(1)}%
-                </span>
+                avg <span style={{ color: cpuColor(t.cpu_avg) }}>{t.cpu_avg.toFixed(1)}%</span>
+                {" "}max <span style={{ color: cpuColor(t.cpu_max) }}>{t.cpu_max.toFixed(1)}%</span>
               </div>
             </div>
           ))}
         </aside>
 
-        {/* Chart panel */}
         <main>
-          {!selected && (
-            <div className="empty">
-              Select a trace to view the CPU timeline
+          {!selected && !loading && (
+            <div className="empty">Select a trace to view the CPU timeline</div>
+          )}
+          {loading && (
+            <div className="loading">
+              <div className="spinner"></div>
+              <span>Loading trace data...</span>
             </div>
           )}
-          {selected && (
+          {selected && !loading && (
             <>
               <div className="panel-header">
                 <h2>{selected.process_name} <span className="muted">PID {selected.pid}</span></h2>
@@ -111,14 +134,11 @@ export default function App() {
                   <span>duration <b>{selected.duration_sec}s</b></span>
                 </div>
               </div>
+
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={samples} margin={{ top: 8, right: 24, bottom: 8, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis
-                    dataKey="t"
-                    tickFormatter={v => `${v.toFixed(1)}s`}
-                    stroke="#94a3b8"
-                  />
+                  <XAxis dataKey="t" tickFormatter={v => `${v.toFixed(1)}s`} stroke="#94a3b8" />
                   <YAxis domain={[0, 100]} unit="%" stroke="#94a3b8" />
                   <Tooltip
                     formatter={(v: number) => [`${v.toFixed(2)}%`, "CPU"]}
@@ -127,14 +147,7 @@ export default function App() {
                   />
                   <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "80%", fill: "#ef4444", fontSize: 11 }} />
                   <ReferenceLine y={50} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: "50%", fill: "#f59e0b", fontSize: 11 }} />
-                  <Line
-                    type="monotone"
-                    dataKey="cpu_pct"
-                    stroke="#38bdf8"
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
+                  <Line type="monotone" dataKey="cpu_pct" stroke="#38bdf8" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
 
@@ -184,7 +197,7 @@ export default function App() {
                     </div>
                     {stats.spikes.length > 0 && (
                       <div className="spike-warning">
-                        ⚠ {stats.spikes.length} CPU spike{stats.spikes.length > 1 ? "s" : ""} detected
+                        {stats.spikes.length} CPU spike{stats.spikes.length > 1 ? "s" : ""} detected
                         ({">"}{ (stats.mean + 2 * stats.stddev).toFixed(1)}% threshold)
                       </div>
                     )}
