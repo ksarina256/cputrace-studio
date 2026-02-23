@@ -141,7 +141,7 @@ export default function App() {
                   <XAxis dataKey="t" tickFormatter={v => `${v.toFixed(1)}s`} stroke="#94a3b8" />
                   <YAxis domain={[0, 100]} unit="%" stroke="#94a3b8" />
                   <Tooltip
-                    formatter={(v: number) => [`${v.toFixed(2)}%`, "CPU"]}
+                    formatter={(v: number | undefined) => [`${(v ?? 0).toFixed(2)}%`, "CPU"]}
                     labelFormatter={l => `t=${Number(l).toFixed(2)}s`}
                     contentStyle={{ background: "#1e293b", border: "1px solid #334155" }}
                   />
@@ -158,7 +158,7 @@ export default function App() {
                   <XAxis dataKey="t" tickFormatter={v => `${v.toFixed(1)}s`} stroke="#94a3b8" />
                   <YAxis stroke="#94a3b8" tickFormatter={v => `${(v/1024).toFixed(0)}MB`} />
                   <Tooltip
-                    formatter={(v: number) => [`${(v/1024).toFixed(2)} MB`, "RSS"]}
+                    formatter={(v: number | undefined) => [`${((v ?? 0)/1024).toFixed(2)} MB`, "RSS"]}
                     contentStyle={{ background: "#1e293b", border: "1px solid #334155" }}
                   />
                   <Line type="monotone" dataKey="rss_kb" stroke="#a78bfa" strokeWidth={2} dot={false} isAnimationActive={false} />
